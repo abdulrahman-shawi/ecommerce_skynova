@@ -51,16 +51,23 @@ export async function generateMetadata({
   };
 }
 
+// ─── Product type for static params ────────
+interface ProductWithSlug {
+  seoSlug: string | null;
+}
+
 // ─── Static Params ─────────────────────────
 export async function generateStaticParams() {
   const result = await getProducts();
   if (!result.success || !result.data) return [];
 
-  return result.data
-    .filter((p) => p.seoSlug)
+  const products = result.data as ProductWithSlug[];
+
+  return products
+    .filter((p): p is ProductWithSlug & { seoSlug: string } => !!p.seoSlug)
     .slice(0, 10)
     .map((product) => ({
-      slug: product.seoSlug as string,
+      slug: product.seoSlug,
     }));
 }
 
