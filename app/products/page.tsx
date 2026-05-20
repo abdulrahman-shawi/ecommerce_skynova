@@ -79,14 +79,31 @@ export default async function ProductsPage() {
     : [];
 
   // Serialize for client (affiliatePrice → price, images[0] → image, stock, Date → string)
-  const serializedProducts = dbProducts.map((p) => ({
+  interface DBProduct {
+    id: number;
+    name: string;
+    description: string | null;
+    affiliatePrice: number;
+    seoSlug: string | null;
+    isActive: boolean;
+    images?: { url: string }[];
+    stocks?: { quantity: number }[];
+    createdAt: Date | string;
+    categoryId: number | null;
+    category: { id: number; name: string; slug: string | null } | null;
+  }
+
+  const productsList = dbProducts as DBProduct[];
+
+  const serializedProducts = productsList.map((p: DBProduct) => ({
     ...p,
     price: Number(p.affiliatePrice),
     image: p.images?.[0]?.url || "https://placehold.co/600x600?text=منتج",
     stock: p.stocks?.reduce((sum, s) => sum + s.quantity, 0) ?? 0,
-    createdAt: p.createdAt.toISOString?.()
-      ? p.createdAt.toISOString()
-      : String(p.createdAt),
+    createdAt:
+      typeof p.createdAt === "string"
+        ? p.createdAt
+        : p.createdAt.toISOString(),
     // NOTE: Product table does NOT have updatedAt column
     category: p.category
       ? {
