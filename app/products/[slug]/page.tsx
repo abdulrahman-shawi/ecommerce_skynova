@@ -113,6 +113,11 @@ function ProductSchema({
 }
 
 // ─── Related Products ──────────────────────
+interface RelatedProduct {
+  categoryId: number | null;
+  seoSlug: string | null;
+}
+
 async function getRelatedProducts(
   categoryId: number | null | undefined,
   currentSlug: string | null
@@ -122,9 +127,12 @@ async function getRelatedProducts(
   const result = await getProducts();
   if (!result.success || !result.data) return [];
 
-  return result.data
+  const products = result.data as RelatedProduct[];
+
+  return products
     .filter(
-      (p) => p.categoryId === categoryId && p.seoSlug !== currentSlug && p.seoSlug
+      (p: RelatedProduct) =>
+        p.categoryId === categoryId && p.seoSlug !== currentSlug && p.seoSlug
     )
     .slice(0, 3);
 }
