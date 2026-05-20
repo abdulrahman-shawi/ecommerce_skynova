@@ -23,27 +23,29 @@ export const metadata: Metadata = {
 };
 
 // ── Types ───────────────────────────────────────────────────────────
+// Matches DB schema: productId = Int (number), commission = computed field
 
 interface AffiliateLink {
   id: string;
-  productId: string;
+  productId: number;
   productName: string;
   uniqueCode: string;
   url: string;
   clicks: number;
   conversions: number;
-  commission: number;
-  createdAt: string;
+  commissionRate: number;
+  createdAt: string | Date;
 }
 
 // ── Mock Products (in real app, fetched from DB) ────────────────────
+// productId = Int (number) per DB schema
 
 const mockProducts = [
-  { id: "p1", name: "سماعات لاسلكية فاخرة", price: 299 },
-  { id: "p2", name: "ساعة ذكية رياضية", price: 499 },
-  { id: "p3", name: "حقيبة ظهر احترافية", price: 189 },
-  { id: "p4", name: "ماوس ألعاب RGB", price: 129 },
-  { id: "p5", name: "كيبورد ميكانيكي", price: 349 },
+  { id: 1, name: "سماعات لاسلكية فاخرة", price: 299 },
+  { id: 2, name: "ساعة ذكية رياضية", price: 499 },
+  { id: 3, name: "حقيبة ظهر احترافية", price: 189 },
+  { id: 4, name: "ماوس ألعاب RGB", price: 129 },
+  { id: 5, name: "كيبورد ميكانيكي", price: 349 },
 ];
 
 // ── Mock Data (fallback if DB is empty) ─────────────────────────────
@@ -51,35 +53,35 @@ const mockProducts = [
 const mockLinks: AffiliateLink[] = [
   {
     id: "1",
-    productId: "p1",
+    productId: 1,
     productName: "سماعات لاسلكية فاخرة",
     uniqueCode: "ABC123",
     url: "https://example.com/r/ABC123",
     clicks: 154,
     conversions: 12,
-    commission: 358.8,
+    commissionRate: 10,
     createdAt: "2024-12-15",
   },
   {
     id: "2",
-    productId: "p2",
+    productId: 2,
     productName: "ساعة ذكية رياضية",
     uniqueCode: "DEF456",
     url: "https://example.com/r/DEF456",
     clicks: 89,
     conversions: 7,
-    commission: 349.3,
+    commissionRate: 10,
     createdAt: "2024-12-20",
   },
   {
     id: "3",
-    productId: "p3",
+    productId: 3,
     productName: "حقيبة ظهر احترافية",
     uniqueCode: "GHI789",
     url: "https://example.com/r/GHI789",
     clicks: 45,
     conversions: 3,
-    commission: 56.7,
+    commissionRate: 10,
     createdAt: "2025-01-05",
   },
 ];
@@ -178,11 +180,11 @@ export default async function LinksPage() {
   let links: AffiliateLink[] = [];
   try {
     const result = await getAffiliateLinks(userId);
-    if (result?.links && result.links.length > 0) {
-      links = result.links.map((l: AffiliateLink) => ({
+    if (result?.success && result.data && result.data.length > 0) {
+      links = result.data.map((l) => ({
         ...l,
-        productName: mockProducts.find((p) => p.id === l.productId)?.name || l.productId,
-        url: l.url || `https://example.com/r/${l.uniqueCode}`,
+        productName: l.product?.name || String(l.productId),
+        url: `https://example.com/r/${l.uniqueCode}`,
       }));
     } else {
       links = mockLinks;
@@ -194,7 +196,10 @@ export default async function LinksPage() {
   // Summary stats
   const totalClicks = links.reduce((sum, l) => sum + l.clicks, 0);
   const totalConversions = links.reduce((sum, l) => sum + l.conversions, 0);
-  const totalCommission = links.reduce((sum, l) => sum + l.commission, 0);
+  const totalCommission = links.reduce(
+    (sum, l) => sum + (l.conversions * l.commissionRate * 100) / 100,
+    0
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 dark:bg-gray-900" dir="rtl">
@@ -299,10 +304,10 @@ export default async function LinksPage() {
                       </div>
                       <div>
                         <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                          {link.commission.toLocaleString("ar-SA")}
+                          {link.commissionRate}%
                         </p>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                          ر.س
+                          نسبة العمولة
                         </p>
                       </div>
                     </div>

@@ -15,7 +15,7 @@ import { createAffiliateLink } from "@/lib/actions";
 // ── Types ───────────────────────────────────────────────────────────
 
 interface Product {
-  id: string;
+  id: number;
   name: string;
   price: number;
 }
@@ -40,7 +40,7 @@ export default function LinkGenerator({
   products,
   onLinkCreated,
 }: LinkGeneratorProps) {
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<GeneratedLink | null>(null);
   const [copied, setCopied] = useState(false);
@@ -53,7 +53,7 @@ export default function LinkGenerator({
   // ── Handlers ──────────────────────────────────────────────────
 
   const handleGenerate = () => {
-    if (!selectedProductId) {
+    if (selectedProductId === null) {
       showToast("يرجى اختيار منتج أولاً");
       return;
     }
@@ -62,11 +62,12 @@ export default function LinkGenerator({
       try {
         const result = await createAffiliateLink(userId, selectedProductId);
 
-        if (result?.success && result?.link) {
+        if (result?.success && result?.data) {
+          const linkData = result.data as { id: string; uniqueCode: string };
           const link: GeneratedLink = {
-            id: result.link.id,
-            url: result.link.url || `${window.location.origin}/r/${result.link.uniqueCode}`,
-            uniqueCode: result.link.uniqueCode,
+            id: linkData.id,
+            url: `${window.location.origin}/r/${linkData.uniqueCode}`,
+            uniqueCode: linkData.uniqueCode,
             productName: selectedProduct?.name || "",
           };
 
@@ -102,7 +103,7 @@ export default function LinkGenerator({
   const handleReset = () => {
     setGeneratedLink(null);
     setShowQr(false);
-    setSelectedProductId("");
+    setSelectedProductId(null);
   };
 
   // ── QR Code URL (using QRServer API) ──────────────────────────
@@ -167,8 +168,11 @@ export default function LinkGenerator({
                   </label>
                   <div className="relative">
                     <select
-                      value={selectedProductId}
-                      onChange={(e) => setSelectedProductId(e.target.value)}
+                      value={selectedProductId ?? ""}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setSelectedProductId(val > 0 ? val : null);
+                      }}
                       className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 pr-10 text-sm text-gray-900 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     >
                       <option value="">-- اختر منتجاً --</option>
@@ -197,7 +201,7 @@ export default function LinkGenerator({
                 {/* Generate Button */}
                 <button
                   onClick={handleGenerate}
-                  disabled={!selectedProductId || isPending}
+                  disabled={selectedProductId === null || isPending}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   {isPending ? (
