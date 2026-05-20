@@ -9,7 +9,7 @@
 // - ProductStock for stock quantity
 // ============================================
 
-import { Product as DBProduct, Category, ProductImage, ProductStock } from "../generated/prisma";
+import { Product as DBProduct, Category, ProductImage, ProductStock } from "@prisma/client";
 import { Product as UICardProduct } from "@/components/ProductCard";
 
 interface DBProductWithRelations extends DBProduct {

@@ -5,7 +5,7 @@
 // development (Next.js hot-reload issue)
 // ============================================
 
-import { PrismaClient } from "../generated/prisma";
+import { PrismaClient } from "@prisma/client";
 
 // Global variable to hold Prisma Client across hot reloads
 const globalForPrisma = globalThis as unknown as {
