@@ -181,9 +181,10 @@ export default async function LinksPage() {
   try {
     const result = await getAffiliateLinks(userId);
     if (result?.success && result.data && result.data.length > 0) {
-      links = result.data.map((l) => ({
+      type LinkData = typeof result.data[0];
+      links = result.data.map((l: LinkData) => ({
         ...l,
-        productName: l.product?.name || String(l.productId),
+        productName: (l as any).product?.name || String(l.productId),
         url: `https://example.com/r/${l.uniqueCode}`,
       }));
     } else {
