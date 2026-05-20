@@ -3,7 +3,8 @@
 import bcrypt from "bcryptjs";
 import { signIn, auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { AuthError } from "next-auth";
+// NOTE: AuthError is not exported from next-auth v5
+// We check error by message/type instead
 
 /**
  * Auth Actions — Updated for INTEGRATED Schema
@@ -29,14 +30,14 @@ export async function login(formData: FormData) {
       redirectTo: "/dashboard",
     });
     return { success: true };
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin":
-          return { error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" };
-        default:
-          return { error: "حدث خطأ أثناء تسجيل الدخول" };
-      }
+  } catch (error: any) {
+    // Check for credential errors by type or message
+    if (error?.type === "CredentialsSignin" || error?.message?.includes("credential")) {
+      return { error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" };
+    }
+    // Other auth errors
+    if (error?.message) {
+      return { error: "حدث خطأ أثناء تسجيل الدخول" };
     }
     throw error;
   }
@@ -84,8 +85,8 @@ export async function register(formData: FormData) {
       redirectTo: "/dashboard",
     });
     return { success: true };
-  } catch (error) {
-    if (error instanceof AuthError) {
+  } catch (error: any) {
+    if (error?.message) {
       return { error: "تم إنشاء الحساب ولكن حدث خطأ أثناء تسجيل الدخول" };
     }
     throw error;

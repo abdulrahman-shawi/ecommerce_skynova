@@ -361,6 +361,7 @@ export async function createOrder(data: {
           totalAmount,
           finalAmount,
           status: "PENDING",
+          paymentMethod: "ONLINE", // Required field, default for e-commerce orders
           items: {
             create: data.items.map((item) => ({
               productId: item.productId,
@@ -426,7 +427,7 @@ export async function getAffiliateOrders(userId: string) {
         product: { select: { name: true, images: { take: 1, select: { url: true } } } },
         affiliateLink: { select: { uniqueCode: true, commissionRate: true } },
       },
-      orderBy: { createdAt: "desc" },
+      // NOTE: OrderItem has no createdAt column in schema, so no orderBy
     });
 
     return { success: true, data: orderItems };
