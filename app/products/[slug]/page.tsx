@@ -39,7 +39,6 @@ export async function generateMetadata({
       images: product.images?.[0]?.url
         ? [{ url: product.images[0].url, width: 600, height: 600, alt: product.name }]
         : [],
-      type: "product",
       locale: "ar_SA",
     },
     twitter: {
