@@ -12,12 +12,7 @@ import {
 } from "lucide-react";
 import CommissionCalculator from "@/components/CommissionCalculator";
 
-// ── SEO ─────────────────────────────────────────────────────────────
-
-export const metadata = {
-  title: "عمولاتي | لوحة التحكم",
-  description: "تتبع عمولاتك والأرباح المتراكمة",
-};
+// NOTE: "use client" component — metadata is handled by parent layout.tsx
 
 // ── Types ───────────────────────────────────────────────────────────
 

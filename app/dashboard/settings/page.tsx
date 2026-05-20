@@ -15,12 +15,7 @@ import {
   Building2,
 } from "lucide-react";
 
-// ── SEO ─────────────────────────────────────────────────────────────
-
-export const metadata = {
-  title: "الإعدادات | لوحة التحكم",
-  description: "إدارة إعدادات حسابك وطريقة الدفع",
-};
+// NOTE: "use client" component — metadata is handled by parent layout.tsx
 
 // ── Types ───────────────────────────────────────────────────────────
 
