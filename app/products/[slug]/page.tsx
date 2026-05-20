@@ -114,8 +114,13 @@ function ProductSchema({
 
 // ─── Related Products ──────────────────────
 interface RelatedProduct {
-  categoryId: number | null;
+  id: number;
+  name: string;
   seoSlug: string | null;
+  categoryId: number | null;
+  affiliatePrice: number;
+  images?: { url: string }[];
+  category?: { name: string } | null;
 }
 
 async function getRelatedProducts(
