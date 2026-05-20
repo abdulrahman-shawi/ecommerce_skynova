@@ -201,7 +201,15 @@ function getCategoryIcon(name: string): JSX.Element {
 
 export default async function CategoriesPage() {
   const result = await getCategories();
-  const categories = result.success ? (result.data ?? []) : [];
+
+  interface CategoryItem {
+    id: number;
+    name: string;
+    slug: string | null;
+    _count?: { products?: number };
+  }
+
+  const categories: CategoryItem[] = result.success ? (result.data ?? []) : [];
 
   return (
     <>
@@ -241,7 +249,7 @@ export default async function CategoriesPage() {
           {categories.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {categories.map((category) => {
-                const productCount = (category as unknown as { _count?: { products?: number } })._count?.products ?? 0;
+                const productCount = category._count?.products ?? 0;
                 return (
                   <Link
                     key={category.id}
