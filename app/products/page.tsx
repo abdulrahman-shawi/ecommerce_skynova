@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 function ItemListSchema({
   products,
 }: {
-  products: { id: string; title: string; seoSlug: string; price: number }[];
+  products: { id: number; name: string; seoSlug: string | null; price: number }[];
 }) {
   const schema = {
     "@context": "https://schema.org",
@@ -44,11 +44,11 @@ function ItemListSchema({
     itemListElement: products.map((p, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      url: `https://example.com/products/${p.seoSlug}`,
-      name: p.title,
+      url: `https://example.com/products/${p.seoSlug ?? p.id}`,
+      name: p.name,
       item: {
         "@type": "Product",
-        name: p.title,
+        name: p.name,
         offers: {
           "@type": "Offer",
           price: p.price,
@@ -78,16 +78,16 @@ export default async function ProductsPage() {
     ? categoriesResult.data ?? []
     : [];
 
-  // Serialize for client (Decimal → number, Date → string)
+  // Serialize for client (affiliatePrice → price, images[0] → image, stock, Date → string)
   const serializedProducts = dbProducts.map((p) => ({
     ...p,
-    price: Number(p.price),
+    price: Number(p.affiliatePrice),
+    image: p.images?.[0]?.url || "https://placehold.co/600x600?text=منتج",
+    stock: p.stocks?.reduce((sum, s) => sum + s.quantity, 0) ?? 0,
     createdAt: p.createdAt.toISOString?.()
       ? p.createdAt.toISOString()
       : String(p.createdAt),
-    updatedAt: p.updatedAt.toISOString?.()
-      ? p.updatedAt.toISOString()
-      : String(p.updatedAt),
+    // NOTE: Product table does NOT have updatedAt column
     category: p.category
       ? {
           id: p.category.id,
@@ -109,7 +109,7 @@ export default async function ProductsPage() {
       <ItemListSchema
         products={serializedProducts.map((p) => ({
           id: p.id,
-          title: p.title,
+          name: p.name,
           seoSlug: p.seoSlug,
           price: p.price,
         }))}

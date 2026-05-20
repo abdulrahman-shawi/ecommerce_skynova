@@ -4,31 +4,30 @@ import { useState, useMemo } from "react";
 import ProductCard from "@/components/ProductCard";
 
 /**
- * Serialized product type (after converting Decimal → number)
- * Inline definition to avoid importing server-only Prisma in client code.
+ * Serialized product type — matches INTEGRATED DB Schema
+ * productId = Int, name (not title), affiliatePrice (not price), images[]
  */
 interface SerializedProduct {
-  id: string;
-  title: string;
+  id: number;
+  name: string;
   description: string | null;
-  price: number;
-  image: string | null;
+  price: number; // ← serialized from affiliatePrice
+  image: string; // ← derived from images[0].url
   stock: number;
-  seoSlug: string;
+  seoSlug: string | null;
   isActive: boolean;
-  categoryId: string;
+  categoryId: number | null;
   createdAt: string;
-  updatedAt: string;
   category: {
-    id: string;
+    id: number;
     name: string;
-    slug: string;
+    slug: string | null;
   } | null;
 }
 
 interface ProductsClientProps {
   products: SerializedProduct[];
-  categories: { id: string; name: string; slug: string }[];
+  categories: { id: number; name: string; slug: string | null }[];
 }
 
 type SortOption = "newest" | "price-asc" | "price-desc";
@@ -42,12 +41,15 @@ export default function ProductsClient({
   categories,
 }: ProductsClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [visibleCount, setVisibleCount] = useState(12);
 
-  const allCategoryOption = { id: "all", name: "الكل", slug: "all" };
-  const categoryOptions = [allCategoryOption, ...categories];
+  const allCategoryOption = { id: "all" as const, name: "الكل", slug: "all" };
+  const categoryOptions = [
+    allCategoryOption,
+    ...categories.map((c) => ({ ...c, id: c.id })),
+  ];
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
@@ -62,7 +64,7 @@ export default function ProductsClient({
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
         (p) =>
-          p.title.toLowerCase().includes(q) ||
+          p.name.toLowerCase().includes(q) ||
           p.description?.toLowerCase().includes(q) ||
           p.category?.name.toLowerCase().includes(q)
       );
@@ -187,12 +189,12 @@ export default function ProductsClient({
               <ProductCard
                 key={product.id}
                 product={{
-                  id: parseInt(product.id.slice(0, 8), 16) || 0,
-                  title: product.title,
+                  id: product.id,
+                  title: product.name,
                   price: product.price,
                   image: product.image || "https://placehold.co/600x600?text=منتج",
                   category: product.category?.name || "عام",
-                  affiliateLink: `/products/${product.seoSlug}`,
+                  affiliateLink: `/products/${product.seoSlug ?? product.id}`,
                   badge:
                     product.stock <= 0
                       ? "نفذت الكمية"
