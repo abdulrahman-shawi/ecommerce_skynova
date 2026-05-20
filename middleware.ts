@@ -1,62 +1,68 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export default auth((req) => {
+/**
+ * Middleware — Edge Runtime Compatible
+ * Uses getToken() from next-auth/jwt (uses jose, NOT bcryptjs)
+ * DO NOT import auth.ts here — it imports bcryptjs which breaks Edge Runtime
+ */
+
+export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
-  const userRole = req.auth?.user?.role;
-  const isAffiliate = req.auth?.user?.isAffiliate;
 
+  // Read JWT token from cookie (Edge-safe, no bcryptjs)
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+  });
+
+  const isLoggedIn = !!token;
+  const userRole = (token?.role as string) || "";
+  const isAffiliate = (token?.isAffiliate as boolean) || false;
+
+  // Route flags
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
-  const isAffiliateRoute = nextUrl.pathname.startsWith("/dashboard/affiliate");
   const isDashboardRoute = nextUrl.pathname.startsWith("/dashboard");
-  const isApiProtectedRoute = nextUrl.pathname.startsWith("/api/protected");
   const isLoginPage = nextUrl.pathname === "/login";
   const isRegisterPage = nextUrl.pathname === "/register";
 
-  // Redirect unauthenticated users to login
+  // ── 1. Not logged in → redirect to login ──
   if (!isLoggedIn) {
-    if (isAdminRoute || isDashboardRoute || isApiProtectedRoute || isAffiliateRoute) {
+    if (isAdminRoute || isDashboardRoute) {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();
   }
 
-  // Redirect authenticated users away from login/register pages
+  // ── 2. Logged in → redirect away from login/register ──
   if (isLoggedIn && (isLoginPage || isRegisterPage)) {
     return NextResponse.redirect(new URL("/dashboard", nextUrl));
   }
 
-  // Admin routes - only ADMIN (accountType = ADMIN)
+  // ── 3. Admin routes → ADMIN only ──
   if (isAdminRoute && userRole !== "ADMIN") {
     return NextResponse.redirect(new URL("/", nextUrl));
   }
 
-  // Affiliate routes - only users with isAffiliate=true or ADMIN
-  if (isAffiliateRoute && !isAffiliate && userRole !== "ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard", nextUrl));
-  }
-
-  // Dashboard routes - must be affiliate or ADMIN or MANAGER
+  // ── 4. Dashboard → ADMIN, MANAGER, or affiliate ──
   if (isDashboardRoute) {
-    // Allow if: ADMIN, MANAGER, or isAffiliate=true
-    const canAccessDashboard =
-      userRole === "ADMIN" || userRole === "MANAGER" || isAffiliate === true;
+    const canAccess =
+      userRole === "ADMIN" || userRole === "MANAGER" || isAffiliate;
 
-    if (!canAccessDashboard) {
+    if (!canAccess) {
       return NextResponse.redirect(new URL("/", nextUrl));
     }
-    return NextResponse.next();
   }
 
   return NextResponse.next();
-});
+}
 
+// ─── Matcher ──────────────────────────────────────
 export const config = {
   matcher: [
     "/admin/:path*",
     "/dashboard/:path*",
-    "/api/protected/:path*",
     "/login",
     "/register",
   ],
