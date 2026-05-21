@@ -114,7 +114,15 @@ export default async function ProductsPage() {
       : null,
   }));
 
-  const serializedCategories = dbCategories.map((c) => ({
+  interface DBCategory {
+    id: number;
+    name: string;
+    slug: string | null;
+  }
+
+  const categoriesList = dbCategories as DBCategory[];
+
+  const serializedCategories = categoriesList.map((c: DBCategory) => ({
     id: c.id,
     name: c.name,
     slug: c.slug,
