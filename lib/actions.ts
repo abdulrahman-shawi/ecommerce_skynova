@@ -330,80 +330,74 @@ export async function createOrder(data: {
   items: { productId: number; quantity: number; price: number; affiliateLinkId?: string }[];
 }) {
   try {
-    const order = await prisma.$transaction(async (tx) => {
-      // 1. Find or create customer by email
-      let customer = await tx.customer.findUnique({
-        where: { name: data.customerName }, // Use name as unique lookup (fallback)
-      });
+    // 1. Find or create customer
+    let customer = await prisma.customer.findUnique({
+      where: { name: data.customerName },
+    });
 
-      if (!customer) {
-        // Create a new customer for e-commerce orders
-        customer = await tx.customer.create({
-          data: {
-            name: data.customerName,
-            phone: [],
-          },
-        });
-      }
-
-      // 2. Generate order number (ORD-{timestamp}-{random})
-      const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-      // 3. Calculate totals
-      const totalAmount = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const finalAmount = totalAmount;
-
-      // 4. Create the order
-      const newOrder = await tx.order.create({
+    if (!customer) {
+      customer = await prisma.customer.create({
         data: {
-          orderNumber,
-          customerId: customer.id,
-          totalAmount,
-          finalAmount,
-          status: "PENDING",
-          paymentMethod: "ONLINE", // Required field, default for e-commerce orders
-          items: {
-            create: data.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price,
-              discount: 0,
-              affiliateLinkId: item.affiliateLinkId ?? null,
-            })),
-          },
+          name: data.customerName,
+          phone: [],
         },
-        include: { items: true },
       });
+    }
 
-      // 5. Create commissions for affiliate-linked items
-      for (const item of data.items) {
-        if (item.affiliateLinkId) {
-          const affiliateLink = await tx.affiliateLink.findUnique({
-            where: { id: item.affiliateLinkId },
+    // 2. Generate order number
+    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // 3. Calculate totals
+    const totalAmount = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    // 4. Create the order
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        customerId: customer.id,
+        totalAmount,
+        finalAmount: totalAmount,
+        status: "PENDING",
+        paymentMethod: "ONLINE",
+        items: {
+          create: data.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            discount: 0,
+            affiliateLinkId: item.affiliateLinkId ?? null,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    // 5. Create commissions for affiliate-linked items
+    for (const item of data.items) {
+      if (item.affiliateLinkId) {
+        const affiliateLink = await prisma.affiliateLink.findUnique({
+          where: { id: item.affiliateLinkId },
+        });
+
+        if (affiliateLink) {
+          const commissionAmount =
+            (item.price * item.quantity * affiliateLink.commissionRate) / 100;
+
+          await prisma.commission.create({
+            data: {
+              affiliateLinkId: item.affiliateLinkId,
+              orderId: order.id,
+              amount: commissionAmount,
+            },
           });
 
-          if (affiliateLink) {
-            const commissionAmount =
-              (item.price * item.quantity * affiliateLink.commissionRate) / 100;
-
-            await tx.commission.create({
-              data: {
-                affiliateLinkId: item.affiliateLinkId,
-                orderId: newOrder.id,
-                amount: commissionAmount,
-              },
-            });
-
-            await tx.affiliateLink.update({
-              where: { id: item.affiliateLinkId },
-              data: { conversions: { increment: 1 } },
-            });
-          }
+          await prisma.affiliateLink.update({
+            where: { id: item.affiliateLinkId },
+            data: { conversions: { increment: 1 } },
+          });
         }
       }
-
-      return newOrder;
-    });
+    }
 
     revalidatePath("/dashboard");
     return { success: true, data: order };
