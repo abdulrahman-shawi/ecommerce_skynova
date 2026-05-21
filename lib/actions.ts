@@ -9,7 +9,6 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "./prisma";
-import { Prisma } from "@prisma/client";
 
 // ============================================
 // Types
@@ -331,7 +330,7 @@ export async function createOrder(data: {
   items: { productId: number; quantity: number; price: number; affiliateLinkId?: string }[];
 }) {
   try {
-    const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const order = await prisma.$transaction(async (tx) => {
       // 1. Find or create customer by email
       let customer = await tx.customer.findUnique({
         where: { name: data.customerName }, // Use name as unique lookup (fallback)
