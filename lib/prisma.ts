@@ -7,18 +7,19 @@
 
 import { PrismaClient } from "@prisma/client";
 
-// Global variable to hold Prisma Client across hot reloads
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+// Declare global type for Prisma Client
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
+}
 
 // Create or reuse existing Prisma Client instance
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+export const prisma: PrismaClient = global.prisma ?? new PrismaClient();
 
 // Store the instance globally in development to prevent
 // multiple instances during Next.js hot reloading
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  global.prisma = prisma;
 }
 
 // Optional: Log queries in development
